@@ -82,7 +82,7 @@ a {
 }
 
 /* =========================
-   TOP RIGHT AUTH
+   TOP AUTH
 ========================= */
 
 #topAuth {
@@ -90,6 +90,7 @@ a {
     position: fixed;
 
     top: 20px;
+
     right: 20px;
 
     z-index: 999;
@@ -134,6 +135,7 @@ a {
     flex-direction: column;
 
     justify-content: center;
+
     align-items: center;
 
     text-align: center;
@@ -166,6 +168,7 @@ a {
     flex-direction: column;
 
     justify-content: center;
+
     align-items: center;
 }
 
@@ -199,6 +202,7 @@ a {
     display: none;
 
     justify-content: center;
+
     align-items: center;
 }
 
@@ -278,17 +282,11 @@ a {
 
 <div id="topAuth">
 
-    <button
-        id="signupBtn"
-        onclick="openSignup()"
-    >
+    <button id="signupBtn" onclick="openSignup()">
         Sign Up
     </button>
 
-    <button
-        id="loginBtn"
-        onclick="openLogin()"
-    >
+    <button id="loginBtn" onclick="openLogin()">
         Log In
     </button>
 
@@ -409,7 +407,7 @@ a {
             placeholder="Your answer..."
         >
 
-        <button onclick="submitAnswer()">
+        <button id="submitBtn" onclick="submitAnswer()">
             Submit
         </button>
 
@@ -499,17 +497,17 @@ a {
 
 const firebaseConfig = {
 
-    apiKey: "YOUR_API_KEY",
+    apiKey: "AIzaSyBAh6si1_7mbPhQ2SNuCyHlfG3-M8LrTTM",
 
-    authDomain: "YOUR_AUTH_DOMAIN",
+    authDomain: "minutequiz-73797.firebaseapp.com",
 
-    projectId: "YOUR_PROJECT_ID",
+    projectId: "minutequiz-73797",
 
-    storageBucket: "YOUR_STORAGE_BUCKET",
+    storageBucket: "minutequiz-73797.firebasestorage.app",
 
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    messagingSenderId: "118494900127",
 
-    appId: "YOUR_APP_ID"
+    appId: "1:118494900127:web:bda7a0179c9d6ba3b297aa"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -586,6 +584,9 @@ function openSignup() {
 
     document.getElementById("authButton")
         .onclick = register;
+
+    document.getElementById("authMessage")
+        .innerText = "";
 }
 
 function openLogin() {
@@ -603,6 +604,9 @@ function openLogin() {
 
     document.getElementById("authButton")
         .onclick = login;
+
+    document.getElementById("authMessage")
+        .innerText = "";
 }
 
 /* =========================
@@ -739,6 +743,11 @@ function updateTimer() {
 
 async function submitAnswer() {
 
+    const submitBtn =
+        document.getElementById("submitBtn");
+
+    submitBtn.disabled = true;
+
     const userAnswer =
         document.getElementById("answer")
             .value
@@ -752,6 +761,8 @@ async function submitAnswer() {
 
         message.innerText =
             "Please fill in the blank!";
+
+        submitBtn.disabled = false;
 
         return;
     }
@@ -771,14 +782,14 @@ async function submitAnswer() {
             showQuickResult(false);
         }
 
+        submitBtn.disabled = false;
+
         return;
     }
 
     /* ENDLESS MODE */
 
     if (currentMode === "endless") {
-
-        /* CORRECT */
 
         if (userAnswer === currentAnswer) {
 
@@ -792,20 +803,17 @@ async function submitAnswer() {
 
             await generateQuestion();
 
-            /* RESET TIMER */
-
             startTimer();
-        }
 
-        /* WRONG */
-
-        else {
+        } else {
 
             clearInterval(timerInterval);
 
             showEndlessResult();
         }
     }
+
+    submitBtn.disabled = false;
 }
 
 /* =========================
@@ -914,10 +922,22 @@ async function saveScore(score, time) {
         const user =
             auth.currentUser;
 
-        const username =
-            document.getElementById("playerName")
-                .value
-                .trim();
+        let username = "Anonymous";
+
+        if (user) {
+
+            const doc =
+                await db
+                    .collection("users")
+                    .doc(user.uid)
+                    .get();
+
+            if (doc.exists) {
+
+                username =
+                    doc.data().username;
+            }
+        }
 
         await db.collection("scores").add({
 
@@ -927,8 +947,7 @@ async function saveScore(score, time) {
             email:
                 user ? user.email : "Guest",
 
-            username:
-                username || "Anonymous",
+            username: username,
 
             score: score,
 
@@ -949,9 +968,15 @@ async function saveScore(score, time) {
 
 async function register() {
 
+    const username =
+        document.getElementById("playerName")
+            .value
+            .trim();
+
     const email =
         document.getElementById("email")
-            .value;
+            .value
+            .trim();
 
     const password =
         document.getElementById("password")
@@ -960,13 +985,37 @@ async function register() {
     const authMessage =
         document.getElementById("authMessage");
 
+    authMessage.innerText = "";
+
+    if (username === "") {
+
+        authMessage.innerText =
+            "Please enter a username.";
+
+        return;
+    }
+
     try {
 
-        await auth
-            .createUserWithEmailAndPassword(
-                email,
-                password
-            );
+        const userCredential =
+            await auth
+                .createUserWithEmailAndPassword(
+                    email,
+                    password
+                );
+
+        const user =
+            userCredential.user;
+
+        await db
+            .collection("users")
+            .doc(user.uid)
+            .set({
+
+                username: username,
+
+                email: email
+            });
 
         authMessage.style.color =
             "#d4ffd4";
@@ -974,7 +1023,16 @@ async function register() {
         authMessage.innerText =
             "Registered successfully!";
 
+        setTimeout(() => {
+
+            backHome();
+
+        }, 1000);
+
     } catch (error) {
+
+        authMessage.style.color =
+            "#fff0f0";
 
         authMessage.innerText =
             error.message;
@@ -989,7 +1047,8 @@ async function login() {
 
     const email =
         document.getElementById("email")
-            .value;
+            .value
+            .trim();
 
     const password =
         document.getElementById("password")
@@ -998,13 +1057,32 @@ async function login() {
     const authMessage =
         document.getElementById("authMessage");
 
+    authMessage.innerText = "";
+
     try {
 
-        await auth
-            .signInWithEmailAndPassword(
-                email,
-                password
-            );
+        const userCredential =
+            await auth
+                .signInWithEmailAndPassword(
+                    email,
+                    password
+                );
+
+        const user =
+            userCredential.user;
+
+        const doc =
+            await db
+                .collection("users")
+                .doc(user.uid)
+                .get();
+
+        if (doc.exists) {
+
+            document.getElementById("playerName")
+                .value =
+                doc.data().username;
+        }
 
         authMessage.style.color =
             "#d4ffd4";
@@ -1012,7 +1090,16 @@ async function login() {
         authMessage.innerText =
             "Login successful!";
 
+        setTimeout(() => {
+
+            backHome();
+
+        }, 1000);
+
     } catch (error) {
+
+        authMessage.style.color =
+            "#fff0f0";
 
         authMessage.innerText =
             error.message;
