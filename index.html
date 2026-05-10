@@ -90,7 +90,6 @@ a {
     position: fixed;
 
     top: 20px;
-
     right: 20px;
 
     z-index: 999;
@@ -135,7 +134,6 @@ a {
     flex-direction: column;
 
     justify-content: center;
-
     align-items: center;
 
     text-align: center;
@@ -168,7 +166,6 @@ a {
     flex-direction: column;
 
     justify-content: center;
-
     align-items: center;
 }
 
@@ -202,7 +199,6 @@ a {
     display: none;
 
     justify-content: center;
-
     align-items: center;
 }
 
@@ -282,11 +278,17 @@ a {
 
 <div id="topAuth">
 
-    <button id="signupBtn" onclick="openSignup()">
+    <button
+        id="signupBtn"
+        onclick="openSignup()"
+    >
         Sign Up
     </button>
 
-    <button id="loginBtn" onclick="openLogin()">
+    <button
+        id="loginBtn"
+        onclick="openLogin()"
+    >
         Log In
     </button>
 
@@ -407,7 +409,7 @@ a {
             placeholder="Your answer..."
         >
 
-        <button id="submitBtn" onclick="submitAnswer()">
+        <button onclick="submitAnswer()">
             Submit
         </button>
 
@@ -554,6 +556,9 @@ function backHome() {
 
     hideAllScreens();
 
+    document.getElementById("topAuth")
+        .style.display = "block";
+
     document.getElementById("landingPage")
         .style.display = "flex";
 
@@ -573,6 +578,9 @@ function openSignup() {
 
     hideAllScreens();
 
+    document.getElementById("topAuth")
+        .style.display = "block";
+
     document.getElementById("authScreen")
         .style.display = "flex";
 
@@ -586,12 +594,22 @@ function openSignup() {
         .onclick = register;
 
     document.getElementById("authMessage")
-        .innerText = "";
+        .innerHTML = `
+
+            Already have an account?
+
+            <a onclick="openLogin()">
+                Log In
+            </a>
+        `;
 }
 
 function openLogin() {
 
     hideAllScreens();
+
+    document.getElementById("topAuth")
+        .style.display = "block";
 
     document.getElementById("authScreen")
         .style.display = "flex";
@@ -606,7 +624,14 @@ function openLogin() {
         .onclick = login;
 
     document.getElementById("authMessage")
-        .innerText = "";
+        .innerHTML = `
+
+            Don't have an account?
+
+            <a onclick="openSignup()">
+                Sign Up
+            </a>
+        `;
 }
 
 /* =========================
@@ -641,6 +666,9 @@ async function startQuiz() {
 
     hideAllScreens();
 
+    document.getElementById("topAuth")
+        .style.display = "none";
+
     document.getElementById("quizScreen")
         .style.display = "flex";
 
@@ -649,6 +677,8 @@ async function startQuiz() {
 
     document.getElementById("message")
         .innerText = "";
+
+    window.scrollTo(0, 0);
 
     await generateQuestion();
 
@@ -743,11 +773,6 @@ function updateTimer() {
 
 async function submitAnswer() {
 
-    const submitBtn =
-        document.getElementById("submitBtn");
-
-    submitBtn.disabled = true;
-
     const userAnswer =
         document.getElementById("answer")
             .value
@@ -761,8 +786,6 @@ async function submitAnswer() {
 
         message.innerText =
             "Please fill in the blank!";
-
-        submitBtn.disabled = false;
 
         return;
     }
@@ -781,8 +804,6 @@ async function submitAnswer() {
 
             showQuickResult(false);
         }
-
-        submitBtn.disabled = false;
 
         return;
     }
@@ -812,8 +833,6 @@ async function submitAnswer() {
             showEndlessResult();
         }
     }
-
-    submitBtn.disabled = false;
 }
 
 /* =========================
@@ -855,6 +874,9 @@ function showQuickResult(correct) {
 async function showEndlessResult() {
 
     hideAllScreens();
+
+    document.getElementById("topAuth")
+        .style.display = "block";
 
     document.getElementById("endlessResultScreen")
         .style.display = "flex";
@@ -922,22 +944,10 @@ async function saveScore(score, time) {
         const user =
             auth.currentUser;
 
-        let username = "Anonymous";
-
-        if (user) {
-
-            const doc =
-                await db
-                    .collection("users")
-                    .doc(user.uid)
-                    .get();
-
-            if (doc.exists) {
-
-                username =
-                    doc.data().username;
-            }
-        }
+        const username =
+            document.getElementById("playerName")
+                .value
+                .trim();
 
         await db.collection("scores").add({
 
@@ -947,7 +957,8 @@ async function saveScore(score, time) {
             email:
                 user ? user.email : "Guest",
 
-            username: username,
+            username:
+                username || "Anonymous",
 
             score: score,
 
@@ -968,15 +979,9 @@ async function saveScore(score, time) {
 
 async function register() {
 
-    const username =
-        document.getElementById("playerName")
-            .value
-            .trim();
-
     const email =
         document.getElementById("email")
-            .value
-            .trim();
+            .value;
 
     const password =
         document.getElementById("password")
@@ -985,37 +990,13 @@ async function register() {
     const authMessage =
         document.getElementById("authMessage");
 
-    authMessage.innerText = "";
-
-    if (username === "") {
-
-        authMessage.innerText =
-            "Please enter a username.";
-
-        return;
-    }
-
     try {
 
-        const userCredential =
-            await auth
-                .createUserWithEmailAndPassword(
-                    email,
-                    password
-                );
-
-        const user =
-            userCredential.user;
-
-        await db
-            .collection("users")
-            .doc(user.uid)
-            .set({
-
-                username: username,
-
-                email: email
-            });
+        await auth
+            .createUserWithEmailAndPassword(
+                email,
+                password
+            );
 
         authMessage.style.color =
             "#d4ffd4";
@@ -1023,16 +1004,7 @@ async function register() {
         authMessage.innerText =
             "Registered successfully!";
 
-        setTimeout(() => {
-
-            backHome();
-
-        }, 1000);
-
     } catch (error) {
-
-        authMessage.style.color =
-            "#fff0f0";
 
         authMessage.innerText =
             error.message;
@@ -1047,8 +1019,7 @@ async function login() {
 
     const email =
         document.getElementById("email")
-            .value
-            .trim();
+            .value;
 
     const password =
         document.getElementById("password")
@@ -1057,32 +1028,13 @@ async function login() {
     const authMessage =
         document.getElementById("authMessage");
 
-    authMessage.innerText = "";
-
     try {
 
-        const userCredential =
-            await auth
-                .signInWithEmailAndPassword(
-                    email,
-                    password
-                );
-
-        const user =
-            userCredential.user;
-
-        const doc =
-            await db
-                .collection("users")
-                .doc(user.uid)
-                .get();
-
-        if (doc.exists) {
-
-            document.getElementById("playerName")
-                .value =
-                doc.data().username;
-        }
+        await auth
+            .signInWithEmailAndPassword(
+                email,
+                password
+            );
 
         authMessage.style.color =
             "#d4ffd4";
@@ -1090,16 +1042,7 @@ async function login() {
         authMessage.innerText =
             "Login successful!";
 
-        setTimeout(() => {
-
-            backHome();
-
-        }, 1000);
-
     } catch (error) {
-
-        authMessage.style.color =
-            "#fff0f0";
 
         authMessage.innerText =
             error.message;
